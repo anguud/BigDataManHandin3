@@ -22,12 +22,35 @@ mlflow.set_experiment("<bjmi> - <templateTest>")
 
 # Import some of the sklearn modules you are likely to use.
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import PolynomialFeatures
+from sklearn.preprocessing import PolynomialFeatures, MinMaxScaler
 from sklearn.linear_model import LinearRegression
-from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neighbors import KNeighborsRegressor, LocalOutlierFactor
 from sklearn.svm import SVR
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_squared_error , mean_absolute_error , r2_score
+from sklearn.impute import SimpleImputer
+
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.compose import ColumnTransformer
+
+# Align the data frames
+
+
+class windDirectionToInt(BaseEstimator,TransformerMixin):
+    def fit(self, X, y):
+        return self
+    
+    def transform(self, X):
+        dict = {"N": 0, "NNE": 0.3926990817, "NE": 0.7853981634, "ENE": 1.1780972451, "E": 1.5707963268, "ESE": 1.9634954085, 
+                "SE": 2.3561944902, "SSE": 2.7488935719, "S":  3.1415926536 , "SSW": 3.5342917353, "SW": 3.926990817, 
+                "WSW": 4.3196898987, "W": 4.7123889804, "WNW": 5.1050880621, "NW": 5.4977871438, "NNW": 5.8904862255
+               }
+        X['Direction'] = X['Direction'].map(dict)
+        return X
+
+
+
+
 
 # Start a run
 # TODO: Set a descriptive name. This is optional, but makes it easier to keep track of your runs.
@@ -38,9 +61,12 @@ with mlflow.start_run(run_name="testRun"):
     # TODO: Handle missing data
     
     pipeline = Pipeline([
-    
-    # TODO: You can start with your pipeline from assignment 1
-    
+    ("windDirection", windDirectionToInt()),
+    ("FillNA", ColumnTransformer([
+        ("imputer", SimpleImputer(strategy="median"), ["Source_time","Speed","Direction"]),
+        ], remainder="passthrough")),
+    ("scale", MinMaxScaler()),
+    ("linRegres", LinearRegression()),
     ])
     
     # TODO: Currently the only metric is MAE. You should add more. What other metrics could you use? Why?
